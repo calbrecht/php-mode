@@ -429,6 +429,17 @@ This variable can take one of the following symbol values:
     map)
   "Keymap for `php-mode'")
 
+(when (fboundp 'c-parse-quotes-before-change)
+  ;; Within emasc git commit 59d07875df9d, changes were made to single
+  ;; quoted string parsing which breaks php-mode because it inherits
+  ;; the java functions.
+  (c-lang-defconst c-get-state-before-change-functions
+    php nil)
+  (c-lang-defconst c-before-font-lock-functions
+    php (remove 'c-parse-quotes-after-change
+                (remove 'c-parse-quotes-before-change
+                        (c-lang-const c-before-font-lock-functions php)))))
+
 (c-lang-defconst c-mode-menu
   php (append '(["Complete function name" php-complete-function t]
                 ["Browse manual" php-browse-manual t]
