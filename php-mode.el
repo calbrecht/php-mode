@@ -429,16 +429,21 @@ This variable can take one of the following symbol values:
     map)
   "Keymap for `php-mode'")
 
-(when (fboundp 'c-parse-quotes-before-change)
+(c-lang-defconst c-before-font-lock-functions
   ;; Within emasc git commit 59d07875df9d, changes were made to single
   ;; quoted string parsing which breaks php-mode because it inherits
   ;; the java functions.
-  (c-lang-defconst c-get-state-before-change-functions
-    php nil)
-  (c-lang-defconst c-before-font-lock-functions
-    php (remove 'c-parse-quotes-after-change
-                (remove 'c-parse-quotes-before-change
-                        (c-lang-const c-before-font-lock-functions php)))))
+  php '((lambda (beg end _old-len)
+          (if (fboundp 'c-depropertize-new-text)
+              (c-depropertize-new-text beg end _old-len)
+            nil))
+        (lambda (beg end _old-len)
+          (if (fboundp 'c-change-expand-fl-region)
+              (c-change-expand-fl-region beg end _old-len)
+            nil))))
+
+(c-lang-defconst c-get-state-before-change-functions
+  php nil)
 
 (c-lang-defconst c-mode-menu
   php (append '(["Complete function name" php-complete-function t]
@@ -452,16 +457,6 @@ This variable can take one of the following symbol values:
 
 (c-lang-defconst c-vsemi-status-unknown-p-fn
   php 'php-c-vsemi-status-unknown-p)
-
-;; Make php-mode recognize opening tags as preprocessor macro's.
-;;
-;; This is a workaround, the tags must be recognized as something
-;; in order for the syntactic guesses of code below the tag
-;; to be correct and as a result not break indentation.
-;;
-;; Note that submatches or \\| here are not expected by cc-mode.
-(c-lang-defconst c-opt-cpp-prefix
-  php "\\s-*<\\?")
 
 (c-lang-defconst c-identifier-ops
   php '(
@@ -931,6 +926,18 @@ this ^ lineup"
   "<<<\\(?:\\w+\\|'\\w+'\\)$"
   "Regular expression for the start of a PHP heredoc.")
 
+(defconst php-open-tag-re
+  "<\\(?:\\?\\(?:php\\)?\\|%\\)"
+  "Regular expression for the PHP open tag.")
+
+(defconst php-close-tag-re
+  "[\\?%]>"
+  "Regular expression for the PHP close tag.")
+
+(defconst php-tag-re
+  (concat php-open-tag-re "\\|" php-close-tag-re)
+  "Regular expression for the PHP tag.")
+
 (defun php-heredoc-end-re (heredoc-start)
   "Build a regular expression for the end of a heredoc started by
 the string HEREDOC-START."
@@ -945,6 +952,14 @@ the string HEREDOC-START."
   ;;    (php-heredoc-start-re (0 (ignore (php-heredoc-syntax))))))
   (goto-char start)
   (while (and (< (point) end)
+              (re-search-forward php-open-tag-re end t))
+    (php-tag-syntax))
+  (goto-char start)
+  (while (and (< (point) end)
+              (re-search-forward php-close-tag-re end t))
+    (php-tag-syntax))
+  (goto-char start)
+  (while (and (< (point) end)
               (re-search-forward php-heredoc-start-re end t))
     (php-heredoc-syntax))
   (goto-char start)
@@ -952,6 +967,13 @@ the string HEREDOC-START."
     (when (php-in-comment-p)
       (c-put-char-property (match-beginning 0)
                            'syntax-table (string-to-syntax "_")))))
+
+(defun php-tag-syntax ()
+  "Mark the php tag as comment so that it gets out of the way when indenting."
+  (goto-char (match-beginning 0))
+  (c-put-char-property (point) 'syntax-table (string-to-syntax "< b"))
+  (goto-char (match-end 0))
+  (c-put-char-property (1- (point)) 'syntax-table (string-to-syntax "> b")))
 
 (defun php-heredoc-syntax ()
   "Mark the boundaries of searched heredoc."
@@ -1465,7 +1487,8 @@ a completion list."
   (list "param" "property" "property-read" "property-write" "return" "var"))
 
 (defconst php-phpdoc-font-lock-doc-comments
-  `(("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
+  `((,php-tag-re 0 'php-php-tag prepend nil)
+    ("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
      (0 'php-doc-annotation-tag prepend nil)
      (1 'php-string prepend nil))
     (,(rx (group "$") (group (in "A-Za-z_") (* (in "0-9A-Za-z_"))))
@@ -1486,7 +1509,7 @@ a completion list."
 
 (defvar php-phpdoc-font-lock-keywords
   `((,(lambda (limit)
-	(c-font-lock-doc-comments "/\\*\\*" limit
+	(c-font-lock-doc-comments (concat php-tag-re "\\|" "/\\*\\*") limit
 	  php-phpdoc-font-lock-doc-comments)))))
 
 (defconst php-font-lock-keywords-1 (c-lang-const c-matchers-1 php)
@@ -1574,16 +1597,7 @@ a completion list."
      (")\\s-*:\\s-*\\??\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*\{" 1 font-lock-type-face)
 
      ;; Highlight class names used as nullable type hints
-     ("\\?\\(\\(:?\\sw\\|\\s_\\)+\\)\\s-+\\$" 1 font-lock-type-face)
-
-     ;; While c-opt-cpp-* highlights the <?php opening tags, it is not
-     ;; possible to make it highlight short open tags and closing tags
-     ;; as well. So we force the correct face on all cases that
-     ;; c-opt-cpp-* lacks for this purpose.
-     ;;
-     ;; Note that starting a file with <% breaks indentation, a
-     ;; limitation we can/should live with.
-     (,(regexp-opt '("?>" "<?" "<%" "%>")) 0 'php-php-tag)))
+     ("\\?\\(\\(:?\\sw\\|\\s_\\)+\\)\\s-+\\$" 1 font-lock-type-face)))
   "Detailed highlighting for PHP Mode.")
 
 (defvar php-font-lock-keywords php-font-lock-keywords-3
