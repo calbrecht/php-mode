@@ -442,7 +442,8 @@ This variable can take one of the following symbol values:
   ;; const might be a symbol in older versions
   php (let ((const (c-lang-const c-before-font-lock-functions)))
         (append (cl-set-difference (if (listp const) const (list const))
-                 '(c-restore-<>-properties c-parse-quotes-after-change))
+                                   '(c-restore-<>-properties
+                                     c-parse-quotes-after-change))
                 '(php-unescape-identifiers))))
 
 (c-lang-defconst c-mode-menu
