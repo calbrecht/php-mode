@@ -926,16 +926,8 @@ this ^ lineup"
   "<<<\\(?:\\w+\\|'\\w+'\\)$"
   "Regular expression for the start of a PHP heredoc.")
 
-(defconst php-open-tag-re
-  "<\\(?:\\?\\(?:php\\)?\\|%\\)"
-  "Regular expression for the PHP open tag.")
-
-(defconst php-close-tag-re
-  "[\\?%]>"
-  "Regular expression for the PHP close tag.")
-
 (defconst php-tag-re
-  (concat php-open-tag-re "\\|" php-close-tag-re)
+  "<\\(?:\\?\\(?:php\\)?\\|%\\)\\|[\\?%]>"
   "Regular expression for the PHP tag.")
 
 (defun php-heredoc-end-re (heredoc-start)
@@ -951,11 +943,7 @@ the string HEREDOC-START."
   (php-unescape-identifiers start end)
   (goto-char start)
   (while (and (< (point) end)
-              (re-search-forward php-open-tag-re end t))
-    (php-tag-syntax))
-  (goto-char start)
-  (while (and (< (point) end)
-              (re-search-forward php-close-tag-re end t))
+              (re-search-forward php-tag-re end t))
     (php-tag-syntax))
   (goto-char start)
   (while (and (< (point) end)
@@ -1480,8 +1468,7 @@ a completion list."
   (list "param" "property" "property-read" "property-write" "return" "var"))
 
 (defconst php-phpdoc-font-lock-doc-comments
-  `((,php-tag-re 0 'php-php-tag prepend nil)
-    ("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
+  `(("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
      (0 'php-doc-annotation-tag prepend nil)
      (1 'php-string prepend nil))
     (,(rx (group "$") (group (in "A-Za-z_") (* (in "0-9A-Za-z_"))))
@@ -1502,7 +1489,9 @@ a completion list."
 
 (defvar php-phpdoc-font-lock-keywords
   `((,(lambda (limit)
-	(c-font-lock-doc-comments (concat php-tag-re "\\|" "/\\*\\*") limit
+        (c-font-lock-doc-comments php-tag-re limit
+          `((,php-tag-re 0 'php-php-tag prepend nil)))
+	(c-font-lock-doc-comments "/\\*\\*" limit
 	  php-phpdoc-font-lock-doc-comments)))))
 
 (defconst php-font-lock-keywords-1 (c-lang-const c-matchers-1 php)
