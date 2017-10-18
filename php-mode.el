@@ -947,6 +947,10 @@ the string HEREDOC-START."
     (php-tag-syntax))
   (goto-char start)
   (while (and (< (point) end)
+              (re-search-forward php-tag-re end t))
+    (php-tag-syntax))
+  (goto-char start)
+  (while (and (< (point) end)
               (re-search-forward php-heredoc-start-re end t))
     (php-heredoc-syntax))
   (goto-char start)
@@ -957,10 +961,8 @@ the string HEREDOC-START."
 
 (defun php-tag-syntax ()
   "Mark the php tag as comment so that it gets out of the way when indenting."
-  (goto-char (match-beginning 0))
-  (c-put-char-property (point) 'syntax-table (string-to-syntax "< b"))
-  (goto-char (match-end 0))
-  (c-put-char-property (1- (point)) 'syntax-table (string-to-syntax "> b")))
+  (c-put-char-property (match-beginning 0) 'syntax-table '(2097163)) ;; "< b"
+  (c-put-char-property (1- (match-end 0)) 'syntax-table '(2097164))) ;; "> b"
 
 (defun php-heredoc-syntax ()
   "Mark the boundaries of searched heredoc."
