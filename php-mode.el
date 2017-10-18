@@ -73,25 +73,15 @@
 (eval-and-compile
   (c-add-language 'php-mode 'java-mode))
 
-(require 'font-lock)
 (require 'add-log)
-(require 'custom)
 (require 'flymake)
 (require 'etags)
 (require 'speedbar)
 
-(require 'cl-lib)
-
 (eval-when-compile
-  (require 'regexp-opt)
+  (require 'cl)
   (defvar c-vsemi-status-unknown-p)
   (defvar syntax-propertize-via-font-lock))
-
-;; Work around emacs bug#18845, cc-mode expects cl to be loaded
-;; while php-mode only uses cl-lib (without compatibility aliases)
-(eval-and-compile
-  (if (and (= emacs-major-version 24) (>= emacs-minor-version 4))
-    (require 'cl)))
 
 ;; Work around https://github.com/ejmr/php-mode/issues/310.
 ;;
