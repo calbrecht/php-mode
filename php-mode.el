@@ -944,8 +944,11 @@ the string HEREDOC-START."
   (goto-char start)
   (while (and (< (point) end)
               (re-search-forward php-tag-re end t))
-    (php-tag-syntax))
- (goto-char start)
+    ;; Mark the php tag as comment so it gets out of the way when indenting.
+    ;; '(2097163) is "< b" and '(2097164) is "> b"
+    (c-put-char-property (match-beginning 0) 'syntax-table '(2097163))
+    (c-put-char-property (1- (match-end 0)) 'syntax-table '(2097164)))
+  (goto-char start)
   (while (and (< (point) end)
               (re-search-forward php-heredoc-start-re end t))
     (php-heredoc-syntax))
