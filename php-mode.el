@@ -945,11 +945,7 @@ the string HEREDOC-START."
   (while (and (< (point) end)
               (re-search-forward php-tag-re end t))
     (php-tag-syntax))
-  (goto-char start)
-  (while (and (< (point) end)
-              (re-search-forward php-tag-re end t))
-    (php-tag-syntax))
-  (goto-char start)
+ (goto-char start)
   (while (and (< (point) end)
               (re-search-forward php-heredoc-start-re end t))
     (php-heredoc-syntax))
@@ -1470,7 +1466,8 @@ a completion list."
   (list "param" "property" "property-read" "property-write" "return" "var"))
 
 (defconst php-phpdoc-font-lock-doc-comments
-  `(("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
+  `((,php-tag-re 0 'php-php-tag prepend nil)
+    ("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
      (0 'php-doc-annotation-tag prepend nil)
      (1 'php-string prepend nil))
     (,(rx (group "$") (group (in "A-Za-z_") (* (in "0-9A-Za-z_"))))
@@ -1491,9 +1488,7 @@ a completion list."
 
 (defvar php-phpdoc-font-lock-keywords
   `((,(lambda (limit)
-        (c-font-lock-doc-comments php-tag-re limit
-          `((,php-tag-re 0 'php-php-tag prepend nil)))
-	(c-font-lock-doc-comments "/\\*\\*" limit
+        (c-font-lock-doc-comments (concat php-tag-re "\\|/\\*\\*") limit
 	  php-phpdoc-font-lock-doc-comments)))))
 
 (defconst php-font-lock-keywords-1 (c-lang-const c-matchers-1 php)
